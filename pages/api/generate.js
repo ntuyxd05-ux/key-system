@@ -1,48 +1,38 @@
-// pages/api/admins/keys/list.js
+// pages/api/generate.js
 import { Redis } from "@upstash/redis";
-
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
   token: process.env.UPSTASH_REDIS_REST_TOKEN,
 });
 
 export default async function handler(req, res) {
-  if (req.method !== "GET") {
+  // TERIMA GET & POST supaya tidak 405 lagi dari device/aplikasi apa pun
+  if (req.method !== "POST" && req.method !== "GET") {
     return res.status(405).json({ ok: false, msg: "Method not allowed" });
   }
 
   try {
-    const limit  = Math.min(parseInt(req.query.limit || "50", 10), 200);
-    const offset = parseInt(req.query.offset || "0", 10);
-
-    // ⬇️ Upstash SDK: pakai zrange dengan { rev: true } (bukan zrevrange)
-    const end = offset + limit - 1;
-    const members = await redis.zrange("keys:index", offset, end, { rev: true });
-
+    const ip =
+      (req.headers["x-forwarded-for"] || "").toString().split(",")[0] ||
+      "0.0.0.0";
     const now = Date.now();
-    const items = [];
+    const expireMs = 24 * 60 * 60 * 1000;
+    const expireAt = now + expireMs;
 
-    for (const key of members) {
-      const ttl = await redis.ttl(`key:${key}`);
-      if (ttl <= 0) {
-        // bereskan index kalau key sudah expired
-        await redis.zrem("keys:index", key);
-        await redis.del(`keymeta:${key}`);
-        continue;
-      }
-      const meta = (await redis.hgetall(`keymeta:${key}`)) || {};
-      items.push({
-        key,
-        ttl, // detik
-        createdAt: Number(meta.createdAt || 0),
-        expiresAt: Number(meta.expiresAt || now + ttl * 1000),
-        ip: meta.ip || "-",
-      });
-    }
+    // generate key
+    const rnd = Math.random().toString(16).slice(2, 10).toUpperCase();
+    const key = rnd + Math.random().toString(16).slice(2, 6).toUpperCase();
 
-    return res.status(200).json({ ok: true, items, offset, limit });
+    // simpan utama (TTL 24h)
+    await redis.set(`key:${key}`, "1", { ex: 86400 });
+    // simpan metadata
+    await redis.hset(`keymeta:${key}`, { createdAt: now, expiresAt: expireAt, ip });
+    await redis.expire(`keymeta:${key}`, 86400);
+    // simpan index untuk listing
+    await redis.zadd("keys:index", { score: now, member: key });
+
+    return res.status(200).json({ ok: true, key, expireAt });
   } catch (e) {
-    // kirim pesan agar keliatan jelas di UI
-    return res.status(500).json({ ok: false, msg: e?.message || "Internal error" });
+    return res.status(500).json({ ok: false, msg: "Internal error" });
   }
 }
