@@ -28,6 +28,23 @@ export default function AdminPage() {
     return { Authorization: "Basic " + token };
   }
 
+  async function deleteKey(k) {
+  if (!k) return;
+  try {
+    const res = await fetch("/api/revoke", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeader() }, // ← penting: Basic Auth
+      body: JSON.stringify({ key: k }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.msg || "Failed");
+    await loadKeys(); // refresh list
+  } catch (e) {
+    setKeysMsg("❌ " + (e.message || "Delete failed"));
+  }
+}
+
+
   async function handleRevoke() {
     setRevokeMsg("Processing...");
     try {
@@ -167,7 +184,18 @@ export default function AdminPage() {
                         sisa {ttlMin} menit · dibuat {fmtTs(row.createdAt)} · exp {fmtTs(row.expiresAt)} · ip {row.ip}
                       </div>
                     </div>
-                    <div style={{ display: "flex", gap: 6 }}>
+                    <div style={{ display:"flex", gap:6 }}>
+  <button className="btn" onClick={()=> navigator.clipboard.writeText(row.key)}>Copy</button>
+  <button className="btn btn-ghost" onClick={()=> setRevokeKey(row.key)}>Gunakan</button>
+  <button
+    className="btn"
+    onClick={()=> deleteKey(row.key)}
+    style={{ background:"rgba(200,40,60,.18)", border:"1px solid rgba(200,40,60,.4)" }}
+  >
+    Delete
+  </button>
+</div>
+
                       <button className="btn" onClick={()=>{ navigator.clipboard.writeText(row.key); }}>Copy</button>
                       <button className="btn btn-ghost" onClick={()=> setRevokeKey(row.key)}>Gunakan</button>
                     </div>
