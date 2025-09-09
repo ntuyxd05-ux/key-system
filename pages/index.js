@@ -30,7 +30,7 @@ export default function Home() {
       try {
         await navigator.clipboard.writeText(data.key);
         setCopyStatus("Key tersalin ke clipboard.");
-      } catch (e) {
+      } catch {
         setCopyStatus("Salin manual dengan tombol Copy Key.");
       }
 
@@ -45,7 +45,7 @@ export default function Home() {
     try {
       await navigator.clipboard.writeText(key);
       setCopyStatus("Key disalin ulang ✔");
-    } catch (e) {
+    } catch {
       setCopyStatus("Gagal menyalin. Salin manual.");
     }
   }
@@ -93,10 +93,14 @@ export default function Home() {
           Copy Key
         </button>
 
+        {/* === Bagian yang kamu minta === */}
         <div className="keypill">
           <span className="badge">FREE</span>
-          <code className="keytext">{displayKey}</code>
+          <code className="keytext">
+            {key ? `FREE-${key.slice(0, 12).toUpperCase()}` : "FREE-XXXXXXXXXXXX"}
+          </code>
         </div>
+        {/* === Jangan ada '}' setelah blok ini === */}
 
         {message ? <div className="alert success">{message}</div> : null}
         {copyStatus ? <div className="note">{copyStatus}</div> : null}
