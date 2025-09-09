@@ -1,73 +1,82 @@
-import { useState } from "react";
+// pages/index.js
+import { useEffect, useState } from "react";
+
 
 export default function Home() {
-  const [key, setKey] = useState("");
-  const [expireAt, setExpireAt] = useState(null);
-  const [probeKey, setProbeKey] = useState("");
-  const [probeMsg, setProbeMsg] = useState("");
+const [isHuman, setIsHuman] = useState(false);
+const [key, setKey] = useState("");
+const [expireAt, setExpireAt] = useState(null);
+const [message, setMessage] = useState("");
+const [copyStatus, setCopyStatus] = useState("");
 
-  const getKey = async () => {
-    try {
-      const res = await fetch("/api/generate", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.msg || "Failed to generate");
-      setKey(data.key);
-      setExpireAt(data.expireAt);
-    } catch (e) {
-      alert(e.message);
-    }
-  };
 
-  const validateKey = async () => {
-    try {
-      const res = await fetch(`/api/validate?key=${encodeURIComponent(probeKey)}`);
-      const data = await res.json();
-      if (res.ok && data.valid) {
-        setProbeMsg("✅ Key valid");
-      } else {
-        setProbeMsg(`❌ ${data.msg || "Key invalid/expired"}`);
-      }
-    } catch {
-      setProbeMsg("⚠️ Tidak dapat menghubungi server");
-    }
-  };
+useEffect(() => {
+if (!message) return;
+const t = setTimeout(() => setMessage(""), 4000);
+return () => clearTimeout(t);
+}, [message]);
 
-  return (
-    <div style={{maxWidth: 720, margin: "56px auto", padding: 20, fontFamily: "Inter, system-ui"}}>
-      <h1>⚡ Key System (24 Jam)</h1>
-      <p>Dapatkan key unik yang otomatis expired dalam 24 jam.</p>
 
-      <button onClick={getKey} style={{padding:"10px 16px", fontSize:16, cursor:"pointer"}}>
-        Get Key
-      </button>
+const getKey = async () => {
+if (!isHuman) {
+setMessage("✅ Ceklis dulu 'Aku manusia'.");
+return;
+}
+try {
+setCopyStatus("");
+const res = await fetch("/api/generate", { method: "POST" });
+const data = await res.json();
+if (!res.ok) throw new Error(data.msg || "Gagal generate key");
+setKey(data.key);
+setExpireAt(data.expireAt);
+try {
+await navigator.clipboard.writeText(data.key);
+setCopyStatus("Key tersalin ke clipboard.");
+} catch {
+setCopyStatus("Salin manual dengan tombol Copy Key.");
+}
+setMessage("Berhasil: Key dibuat. Berlaku 24 jam.");
+} catch (e) {
+setMessage(e.message || "Terjadi kesalahan.");
+}
+};
 
-      {key && (
-        <div style={{marginTop:16}}>
-          <h3>Your Key</h3>
-          <code style={{display:"block", padding:12, background:"#0b0b0b", color:"#9cff9c", borderRadius:8}}>
-            {key}
-          </code>
-          <div style={{opacity:.8, marginTop:8}}>
-            Expired at: {new Date(expireAt).toLocaleString()}
-          </div>
-        </div>
-      )}
 
-      <hr style={{margin:"28px 0"}}/>
+const copyKey = async () => {
+if (!key) return;
+try {
+await navigator.clipboard.writeText(key);
+setCopyStatus("Key disalin ulang ✔");
+} catch {
+setCopyStatus("Gagal menyalin. Salin manual.");
+}
+};
 
-      <h3>Validate Key</h3>
-      <div style={{display:"flex", gap:8}}>
-        <input
-          value={probeKey}
-          onChange={e=>setProbeKey(e.target.value)}
-          placeholder="Paste key di sini"
-          style={{flex:1, padding:"10px 12px"}}
-        />
-        <button onClick={validateKey} style={{padding:"10px 16px", fontSize:16}}>
-          Validate
-        </button>
-      </div>
-      {probeMsg && <p style={{marginTop:10}}>{probeMsg}</p>}
-    </div>
-  );
+
+return (
+<div className="page">
+<div className="bg-aurora" />
+<header className="wrap">
+<span className="chip">FREE KEY 24H</span>
+</header>
+<main className="wrap card">
+<h1 className="title"><span className="brand">[Neon HUB]</span> Free Key</h1>
+<p className="muted">Selesaikan verifikasi ceklis sederhana untuk mendapatkan <strong>1 Free Key</strong> yang berlaku selama <strong>24 Jam</strong>.</p>
+
+
+<label className="checkbox">
+<input type="checkbox" checked={isHuman} onChange={(e)=>setIsHuman(e.target.checked)} />
+<span className="box" />
+<span>Aku manusia</span>
+</label>
+
+
+<button className="btn btn-gradient" onClick={getKey}>Get Key</button>
+<button className="btn btn-ghost" onClick={copyKey} disabled={!key} style={{cursor: key?"pointer":"not-allowed"}}>Copy Key</button>
+
+
+<div className="keypill">
+<span className="badge">FREE</span>
+<code className="keytext">{key ? `FREE-${key.slice(0,12).toUpperCase()}` : "FREE-XXXXXXXXXXXX"}</code>
+</div>
 }
