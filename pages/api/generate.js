@@ -1,25 +1,30 @@
-export async function middleware(req) {
-  const url = new URL(req.url);
-  const path = url.pathname;
-  const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0] || req.ip || "0.0.0.0";
+// pages/api/generate.js
+import { Redis } from "@upstash/redis";
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
 
-  // 🔒 rute admin saja
-  if (
-    path === "/admin" ||
-    path.startsWith("/api/revoke") ||
-    path.startsWith("/api/admins")
-  ) {
-    if (!(await checkBasicAuth(req))) return unauthorized();
-    // (opsional) rate limit admin...
-    return NextResponse.next();
+export default async function handler(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ ok: false, msg: "Method not allowed" });
   }
+  try {
+    const ip = (req.headers["x-forwarded-for"] || "").toString().split(",")[0] || "0.0.0.0";
+    const now = Date.now();
+    const expireMs = 24 * 60 * 60 * 1000;
+    const expireAt = now + expireMs;
 
-  // ✅ rute generate tidak butuh auth (boleh rate limit ringan)
-  if (path.startsWith("/api/generate")) {
-    // rate limit…
-    return NextResponse.next();
+    const rnd = Math.random().toString(16).slice(2, 10).toUpperCase();
+    const key = rnd + Math.random().toString(16).slice(2, 6).toUpperCase();
+
+    await redis.set(`key:${key}`, "1", { ex: 86400 });
+    await redis.hset(`keymeta:${key}`, { createdAt: now, expiresAt: expireAt, ip });
+    await redis.expire(`keymeta:${key}`, 86400);
+    await redis.zadd("keys:index", { score: now, member: key });
+
+    return res.status(200).json({ ok: true, key, expireAt });
+  } catch (e) {
+    return res.status(500).json({ ok: false, msg: "Internal error" });
   }
-
-  // rute lain…
-  return NextResponse.next();
 }
