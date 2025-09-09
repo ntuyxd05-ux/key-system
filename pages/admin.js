@@ -199,7 +199,7 @@ export default function AdminPage() {
                       <button className="btn" onClick={()=>{ navigator.clipboard.writeText(row.key); }}>Copy</button>
                       <button className="btn btn-ghost" onClick={()=> setRevokeKey(row.key)}>Gunakan</button>
                     </div>
-                  </div>
+
                 );
               })}
             </div>
