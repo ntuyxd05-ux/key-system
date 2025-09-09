@@ -1,66 +1,66 @@
 // pages/admin.js
-import React, { useEffect, useState } from "react";
-
-/**
- * Panel Admin
- * - Basic Auth via input username/password → dikirim sebagai header Authorization
- * - Refresh: GET /api/keys        (harus sudah ada di proyekmu)
- * - Revoke:  POST /api/revoke     (sudah ada)
- * - Admins:  GET/POST/DELETE /api/admins  (opsional, tombol tetap ada)
- *
- * Struktur data key pada list diasumsikan: { key, createdAt, expiresAt, ip, ttl }
- */
+import React, { useState } from "react";
 
 export default function AdminPage() {
-  // ====== STATE ======
-  const [adminUser, setAdminUser] = useState("");
-  const [adminPass, setAdminPass] = useState("");
-  const [revokeKey, setRevokeKey] = useState("");
+  // ===== STATE =====
+  const [user, setUser] = useState("");
+  const [pass, setPass] = useState("");
+
   const [keys, setKeys] = useState([]);
   const [keysMsg, setKeysMsg] = useState("");
-  const [admins, setAdmins] = useState([]);
-  const [adminsMsg, setAdminsMsg] = useState("");
-  const [showAdmins, setShowAdmins] = useState(false);
 
-  // ====== HELPERS ======
+  const [revokeKey, setRevokeKey] = useState("");
+  const [revokeMsg, setRevokeMsg] = useState("");
+
+  // ===== HELPERS =====
   function authHeader() {
-    if (!adminUser || !adminPass) return {};
+    if (!user || !pass) return {};
     try {
-      const token = btoa(unescape(encodeURIComponent(`${adminUser}:${adminPass}`)));
+      const token = btoa(unescape(encodeURIComponent(`${user}:${pass}`)));
       return { Authorization: `Basic ${token}` };
     } catch {
-      // fallback sederhana
-      const token = btoa(`${adminUser}:${adminPass}`);
+      const token = btoa(`${user}:${pass}`);
       return { Authorization: `Basic ${token}` };
     }
   }
 
-  function fmtTs(ms) {
-    if (!ms) return "-";
+  function fmtTs(x) {
+    if (!x) return "-";
     try {
-      return new Date(Number(ms)).toLocaleString("id-ID");
+      return new Date(Number(x)).toLocaleString("id-ID");
     } catch {
       return "-";
     }
   }
 
-  // ====== API CALLS ======
+  // ===== API =====
   async function loadKeys() {
-    setKeysMsg("");
+    setKeysMsg("Loading...");
     try {
-      const res = await fetch("/api/keys", { headers: { ...authHeader() } });
+      const res = await fetch("/api/admins/keys/list?limit=100", {
+        headers: { ...authHeader() },
+      });
       const ct = res.headers.get("content-type") || "";
-      const data = ct.includes("application/json") ? await res.json() : { msg: await res.text() };
+      const data = ct.includes("application/json")
+        ? await res.json()
+        : { msg: await res.text() };
+
       if (!res.ok) throw new Error(data.msg || `HTTP ${res.status}`);
-      setKeys(Array.isArray(data.items) ? data.items : []);
+      const items = Array.isArray(data.items) ? data.items : [];
+      setKeys(items);
+      setKeysMsg(items.length ? "" : "Belum ada key aktif.");
     } catch (e) {
       setKeys([]);
-      setKeysMsg("❌ " + (e.message || "Internal error"));
+      setKeysMsg(`❌ ${e.message || "Load failed"}`);
     }
   }
 
   async function handleRevoke() {
-    if (!revokeKey) return;
+    if (!revokeKey) {
+      setRevokeMsg("Masukkan key yang akan direvoke.");
+      return;
+    }
+    setRevokeMsg("Processing...");
     try {
       const res = await fetch("/api/revoke", {
         method: "POST",
@@ -69,15 +69,14 @@ export default function AdminPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.msg || `HTTP ${res.status}`);
-      setKeysMsg("✅ Key revoked");
+      setRevokeMsg("✅ Key revoked");
       setRevokeKey("");
       await loadKeys();
     } catch (e) {
-      setKeysMsg("❌ " + (e.message || "Internal error"));
+      setRevokeMsg(`❌ ${e.message || "Failed"}`);
     }
   }
 
-  // --- Delete pakai endpoint revoke juga (per item) ---
   async function deleteKey(k) {
     if (!k) return;
     try {
@@ -90,40 +89,29 @@ export default function AdminPage() {
       if (!res.ok) throw new Error(data.msg || "Failed");
       await loadKeys();
     } catch (e) {
-      setKeysMsg("❌ " + (e.message || "Delete failed"));
+      setKeysMsg(`❌ ${e.message || "Delete failed"}`);
     }
   }
 
-  // Admins (opsional – tetap dipertahankan agar struktur tidak berubah)
-  async function loadAdmins() {
-    setAdminsMsg("");
-    try {
-      const res = await fetch("/api/admins", { headers: { ...authHeader() } });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.msg || `HTTP ${res.status}`);
-      setAdmins(Array.isArray(data.items) ? data.items : []);
-    } catch (e) {
-      setAdmins([]);
-      setAdminsMsg("❌ " + (e.message || "Gagal load admins"));
-    }
-  }
-
-  // ====== EFFECTS ======
-  useEffect(() => {
-    // otomatis tidak fetch apa pun sampai user isi credential
-  }, []);
-
-  // ====== STYLE (ringan) ======
-  const panel = {
+  // ===== UI STYLE =====
+  const container = {
     maxWidth: 920,
-    margin: "48px auto",
-    padding: 24,
-    background: "rgba(20,15,25,.75)",
+    margin: "40px auto",
+    padding: 20,
     borderRadius: 16,
-    boxShadow: "0 0 80px rgba(175, 80, 255, .25)",
-    border: "1px solid rgba(175, 80, 255, .25)",
+    background: "rgba(20,15,25,.8)",
+    border: "1px solid rgba(175,80,255,.25)",
+    boxShadow: "0 0 80px rgba(175,80,255,.22)",
   };
-  const row = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 };
+  const grid2 = { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 };
+  const input = {
+    width: "100%",
+    padding: 12,
+    borderRadius: 10,
+    background: "#0f0f17",
+    color: "#e8defc",
+    border: "1px solid rgba(255,255,255,.08)",
+  };
   const pill = {
     display: "flex",
     alignItems: "center",
@@ -131,84 +119,66 @@ export default function AdminPage() {
     gap: 12,
     padding: 14,
     borderRadius: 12,
-    background: "rgba(30, 20, 45, .65)",
-    border: "1px solid rgba(160, 90, 255, .18)",
+    background: "rgba(30,20,45,.65)",
+    border: "1px solid rgba(160,90,255,.18)",
   };
 
-  // ====== RENDER ======
+  // ===== RENDER =====
   return (
     <main style={{ padding: 16 }}>
-      <div style={panel}>
-        <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 8 }}>
+      <div style={container}>
+        <h1 style={{ margin: 0, fontSize: 30, fontWeight: 800 }}>
           <span style={{ color: "#e984ff" }}>Admin</span> Panel
         </h1>
-        <p className="muted" style={{ marginBottom: 16 }}>
-          Endpoint admin dilindungi <b>Basic Auth</b> + rate limit.
+        <p style={{ opacity: 0.8, marginTop: 6 }}>
+          Masukkan kredensial admin (Basic Auth) lalu kelola key di bawah.
         </p>
 
-        {/* creds */}
-        <div style={row}>
+        {/* credentials */}
+        <div style={{ ...grid2, marginTop: 12 }}>
           <input
-            className="input"
+            style={input}
             placeholder="Admin username"
-            value={adminUser}
-            onChange={(e) => setAdminUser(e.target.value)}
+            value={user}
+            onChange={(e) => setUser(e.target.value)}
           />
           <input
-            className="input"
+            style={input}
             placeholder="Admin password"
             type="password"
-            value={adminPass}
-            onChange={(e) => setAdminPass(e.target.value)}
+            value={pass}
+            onChange={(e) => setPass(e.target.value)}
           />
         </div>
 
-        {/* action bar */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 16 }}>
-          <button className="btn" onClick={handleRevoke}>Revoke Key</button>
-          <button className="btn btn-ghost" onClick={() => { setShowAdmins(!showAdmins); if (!showAdmins) loadAdmins(); }}>
-            Admins
-          </button>
-        </div>
-
-        {/* input revoke */}
-        <div style={{ marginTop: 12 }}>
+        {/* revoke box */}
+        <div style={{ marginTop: 14 }}>
           <input
-            className="input"
+            style={input}
             placeholder="Key yang akan direvoke"
             value={revokeKey}
             onChange={(e) => setRevokeKey(e.target.value)}
           />
-          <button className="btn" style={{ width: "100%", marginTop: 12 }} onClick={handleRevoke}>
-            Revoke Key
-          </button>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 10 }}>
+            <button className="btn" onClick={handleRevoke}>
+              Revoke Key
+            </button>
+            <button className="btn btn-ghost" onClick={loadKeys}>
+              Refresh List
+            </button>
+          </div>
+          {revokeMsg ? (
+            <div className="note" style={{ marginTop: 8 }}>{revokeMsg}</div>
+          ) : null}
         </div>
 
-        {/* status */}
-        {keysMsg ? (
-          <div className="note" style={{ marginTop: 10 }}>
-            {keysMsg}
-          </div>
-        ) : null}
-
-        {/* list keys */}
-        <div style={{ marginTop: 22 }}>
-          <div className="muted" style={{ marginBottom: 8 }}>
-            <b>Key aktif</b> (otomatis hide yang expired)
-          </div>
-          <button className="btn btn-ghost" style={{ width: "100%", marginBottom: 10 }} onClick={loadKeys}>
-            Refresh
-          </button>
-
-          {keysMsg && keys.length === 0 ? (
-            <div className="note">{keysMsg}</div>
-          ) : null}
-
+        {/* keys list */}
+        <div style={{ marginTop: 20 }}>
+          {keysMsg ? <div className="note" style={{ marginBottom: 8 }}>{keysMsg}</div> : null}
           <div style={{ display: "grid", gap: 10 }}>
             {keys.map((row) => {
               const disp = "FREE-" + row.key.slice(0, 12).toUpperCase();
               const ttlMin = Math.max(0, Math.floor((row.ttl || 0) / 60));
-
               return (
                 <div key={row.key} style={pill}>
                   <div style={{ display: "grid" }}>
@@ -228,14 +198,12 @@ export default function AdminPage() {
                     >
                       Copy
                     </button>
-
                     <button
                       className="btn btn-ghost"
                       onClick={() => setRevokeKey(row.key)}
                     >
                       Gunakan
                     </button>
-
                     <button
                       className="btn"
                       onClick={() => deleteKey(row.key)}
@@ -252,24 +220,6 @@ export default function AdminPage() {
             })}
           </div>
         </div>
-
-        {/* admins section (optional UI) */}
-        {showAdmins ? (
-          <div style={{ marginTop: 28 }}>
-            <h3 style={{ marginBottom: 8 }}>Admins</h3>
-            {adminsMsg ? <div className="note">{adminsMsg}</div> : null}
-            <div className="muted" style={{ fontSize: 13, marginTop: 8 }}>
-              Total: {admins.length}
-            </div>
-            <ul style={{ marginTop: 8 }}>
-              {admins.map((a) => (
-                <li key={a} style={{ marginBottom: 6 }}>
-                  <code>{a}</code>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
       </div>
     </main>
   );
