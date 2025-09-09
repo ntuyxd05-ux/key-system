@@ -9,7 +9,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!message) return;
-    const t = setTimeout(() => setMessage(""), 4000);
+    const t = setTimeout(function () { setMessage(""); }, 4000);
     return () => clearTimeout(t);
   }, [message]);
 
@@ -30,7 +30,7 @@ export default function Home() {
       try {
         await navigator.clipboard.writeText(data.key);
         setCopyStatus("Key tersalin ke clipboard.");
-      } catch {
+      } catch (e) {
         setCopyStatus("Salin manual dengan tombol Copy Key.");
       }
 
@@ -45,13 +45,14 @@ export default function Home() {
     try {
       await navigator.clipboard.writeText(key);
       setCopyStatus("Key disalin ulang ✔");
-    } catch {
+    } catch (e) {
       setCopyStatus("Gagal menyalin. Salin manual.");
     }
   }
 
-  const displayKey =
-    key ? "FREE-" + key.slice(0, 12).toUpperCase() : "FREE-XXXXXXXXXXXX";
+  const displayKey = key
+    ? "FREE-" + key.slice(0, 12).toUpperCase()
+    : "FREE-XXXXXXXXXXXX";
 
   return (
     <div className="page">
@@ -65,6 +66,7 @@ export default function Home() {
         <h1 className="title">
           <span className="brand">[Neon HUB]</span> Free Key
         </h1>
+
         <p className="muted">
           Selesaikan verifikasi ceklis sederhana untuk mendapatkan{" "}
           <strong>1 Free Key</strong> yang berlaku selama <strong>24 Jam</strong>.
@@ -80,9 +82,7 @@ export default function Home() {
           <span>Aku manusia</span>
         </label>
 
-        <button className="btn btn-gradient" onClick={getKey}>
-          Get Key
-        </button>
+        <button className="btn btn-gradient" onClick={getKey}>Get Key</button>
 
         <button
           className="btn btn-ghost"
@@ -93,14 +93,12 @@ export default function Home() {
           Copy Key
         </button>
 
-        {/* === Bagian yang kamu minta === */}
+        {/* === Key pill (bagian yang bermasalah) === */}
         <div className="keypill">
           <span className="badge">FREE</span>
-          <code className="keytext">
-            {key ? `FREE-${key.slice(0, 12).toUpperCase()}` : "FREE-XXXXXXXXXXXX"}
-          </code>
+          <code className="keytext">{displayKey}</code>
         </div>
-        {/* === Jangan ada '}' setelah blok ini === */}
+        {/* === Perhatikan: TIDAK ada '}' berdiri sendiri di sini === */}
 
         {message ? <div className="alert success">{message}</div> : null}
         {copyStatus ? <div className="note">{copyStatus}</div> : null}
@@ -114,12 +112,7 @@ export default function Home() {
           </span>
         </div>
 
-        <a
-          className="discord"
-          href="https://discord.com"
-          target="_blank"
-          rel="noreferrer"
-        >
+        <a className="discord" href="https://discord.com" target="_blank" rel="noreferrer">
           NeonHUB ❤️
         </a>
       </main>
