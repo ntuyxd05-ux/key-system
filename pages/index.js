@@ -99,10 +99,6 @@ export default function Home() {
     {key ? "FREE-" + key.slice(0,12).toUpperCase() : "FREE-XXXXXXXXXXXX"}
   </code>
 </div>
-
-{message ? <div className="alert success">{message}</div> : null}
-{copyStatus ? <div className="note">{copyStatus}</div> : null}
-
         {message ? <div className="alert success">{message}</div> : null}
         {copyStatus ? <div className="note">{copyStatus}</div> : null}
 
