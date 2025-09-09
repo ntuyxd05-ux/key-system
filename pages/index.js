@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 export default function Home() {
   const [isHuman, setIsHuman] = useState(false);
@@ -30,7 +30,7 @@ export default function Home() {
       try {
         await navigator.clipboard.writeText(data.key);
         setCopyStatus("Key tersalin ke clipboard.");
-      } catch {
+      } catch (e) {
         setCopyStatus("Salin manual dengan tombol Copy Key.");
       }
 
@@ -45,10 +45,13 @@ export default function Home() {
     try {
       await navigator.clipboard.writeText(key);
       setCopyStatus("Key disalin ulang ✔");
-    } catch {
+    } catch (e) {
       setCopyStatus("Gagal menyalin. Salin manual.");
     }
   }
+
+  const displayKey =
+    key ? "FREE-" + key.slice(0, 12).toUpperCase() : "FREE-XXXXXXXXXXXX";
 
   return (
     <div className="page">
@@ -77,7 +80,10 @@ export default function Home() {
           <span>Aku manusia</span>
         </label>
 
-        <button className="btn btn-gradient" onClick={getKey}>Get Key</button>
+        <button className="btn btn-gradient" onClick={getKey}>
+          Get Key
+        </button>
+
         <button
           className="btn btn-ghost"
           onClick={copyKey}
@@ -89,13 +95,11 @@ export default function Home() {
 
         <div className="keypill">
           <span className="badge">FREE</span>
-          <code className="keytext">
-            {key ? `FREE-${key.slice(0, 12).toUpperCase()}` : "FREE-XXXXXXXXXXXX"}
-          </code>
+          <code className="keytext">{displayKey}</code>
         </div>
 
-        {message && <div className="alert success">{message}</div>}
-        {copyStatus && <div className="note">{copyStatus}</div>}
+        {message ? <div className="alert success">{message}</div> : null}
+        {copyStatus ? <div className="note">{copyStatus}</div> : null}
 
         <div className="footerline">
           <span className="muted">
@@ -106,7 +110,12 @@ export default function Home() {
           </span>
         </div>
 
-        <a className="discord" href="https://discord.com" target="_blank" rel="noreferrer">
+        <a
+          className="discord"
+          href="https://discord.com"
+          target="_blank"
+          rel="noreferrer"
+        >
           NeonHUB ❤️
         </a>
       </main>
