@@ -17,31 +17,26 @@ export default function Home() {
   if (!isHuman) { setMessage("✅ Ceklis dulu 'Aku manusia'."); return; }
   try {
     setCopyStatus("");
-
-    const res = await fetch("/api/generate", { method: "POST" });
+    const res = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}" // kirim body kosong agar pasti POST (beberapa proxy strict)
+    });
 
     const ct = res.headers.get("content-type") || "";
-    let data;
-    if (ct.includes("application/json")) {
-      data = await res.json();
-    } else {
-      const text = await res.text();       // <- kalau bukan JSON, baca teksnya
-      throw new Error(text || (`HTTP ${res.status} ${res.statusText}`));
-    }
-
+    const data = ct.includes("application/json") ? await res.json() : { msg: await res.text() };
     if (!res.ok) throw new Error(data.msg || `HTTP ${res.status}`);
 
     setKey(data.key);
     setExpireAt(data.expireAt);
-
     try { await navigator.clipboard.writeText(data.key); setCopyStatus("Key tersalin ke clipboard."); }
     catch { setCopyStatus("Salin manual dengan tombol Copy Key."); }
-
     setMessage("Berhasil: Key dibuat. Berlaku 24 jam.");
   } catch (e) {
-    setMessage(String(e.message || e));    // <- tampilkan pesan asli
+    setMessage(String(e.message || e));
   }
 }
+
 
 
   async function copyKey() {
