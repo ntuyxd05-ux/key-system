@@ -6,7 +6,7 @@ const redis = new Redis({
 });
 
 export default async function handler(req, res) {
-  // TERIMA GET & POST supaya tidak 405 lagi dari device/aplikasi apa pun
+  // TERIMA POST & GET agar tidak 405 dari client yang berbeda
   if (req.method !== "POST" && req.method !== "GET") {
     return res.status(405).json({ ok: false, msg: "Method not allowed" });
   }
@@ -15,8 +15,35 @@ export default async function handler(req, res) {
     const ip =
       (req.headers["x-forwarded-for"] || "").toString().split(",")[0] ||
       "0.0.0.0";
+
+    // ====== 1 IP = 1 key aktif ======
+    // Tanpa merubah struktur data: kita scan index yang sudah ada.
+    // Ambil paling baru (rev=true) sampai 500 item ke belakang (cukup untuk kebanyakan kasus).
+    const members = await redis.zrange("keys:index", 0, 499, { rev: true });
+    for (const k of members) {
+      const ttl = await redis.ttl(`key:${k}`);
+      if (ttl <= 0) {
+        // bereskan index kalau sudah kadaluarsa
+        await redis.zrem("keys:index", k);
+        await redis.del(`keymeta:${k}`);
+        continue;
+      }
+      const meta = await redis.hgetall(`keymeta:${k}`);
+      if (meta && meta.ip === ip) {
+        // IP ini masih punya key aktif → JANGAN buat baru.
+        return res.status(200).json({
+          ok: true,
+          key: k,
+          expireAt: Number(meta.expiresAt || Date.now() + ttl * 1000),
+          reused: true,
+        });
+      }
+    }
+    // =================================
+
+    // Tidak ada key aktif untuk IP ini → buat baru
     const now = Date.now();
-    const expireMs = 24 * 60 * 60 * 1000;
+    const expireMs = 24 * 60 * 60 * 1000; // 24 jam
     const expireAt = now + expireMs;
 
     // generate key
@@ -31,7 +58,7 @@ export default async function handler(req, res) {
     // simpan index untuk listing
     await redis.zadd("keys:index", { score: now, member: key });
 
-    return res.status(200).json({ ok: true, key, expireAt });
+    return res.status(200).json({ ok: true, key, expireAt, reused: false });
   } catch (e) {
     return res.status(500).json({ ok: false, msg: "Internal error" });
   }
