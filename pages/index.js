@@ -93,12 +93,15 @@ export default function Home() {
           Copy Key
         </button>
 
-        {/* === Key pill (bagian yang bermasalah) === */}
         <div className="keypill">
-          <span className="badge">FREE</span>
-          <code className="keytext">{displayKey}</code>
-        </div>
-        {/* === Perhatikan: TIDAK ada '}' berdiri sendiri di sini === */}
+  <span className="badge">FREE</span>
+  <code className="keytext">
+    {key ? "FREE-" + key.slice(0,12).toUpperCase() : "FREE-XXXXXXXXXXXX"}
+  </code>
+</div>
+
+{message ? <div className="alert success">{message}</div> : null}
+{copyStatus ? <div className="note">{copyStatus}</div> : null}
 
         {message ? <div className="alert success">{message}</div> : null}
         {copyStatus ? <div className="note">{copyStatus}</div> : null}
