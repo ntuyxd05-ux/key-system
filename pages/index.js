@@ -14,18 +14,35 @@ export default function Home() {
   }, [message]);
 
   async function getKey() {
-    if (!isHuman) { setMessage("✅ Ceklis dulu 'Aku manusia'."); return; }
-    try {
-      setCopyStatus("");
-      const res = await fetch("/api/generate", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.msg || "Gagal generate key");
-      setKey(data.key); setExpireAt(data.expireAt);
-      try { await navigator.clipboard.writeText(data.key); setCopyStatus("Key tersalin ke clipboard."); }
-      catch { setCopyStatus("Salin manual dengan tombol Copy Key."); }
-      setMessage("Berhasil: Key dibuat. Berlaku 24 jam.");
-    } catch (e) { setMessage(e.message || "Terjadi kesalahan."); }
+  if (!isHuman) { setMessage("✅ Ceklis dulu 'Aku manusia'."); return; }
+  try {
+    setCopyStatus("");
+
+    const res = await fetch("/api/generate", { method: "POST" });
+
+    const ct = res.headers.get("content-type") || "";
+    let data;
+    if (ct.includes("application/json")) {
+      data = await res.json();
+    } else {
+      const text = await res.text();       // <- kalau bukan JSON, baca teksnya
+      throw new Error(text || (`HTTP ${res.status} ${res.statusText}`));
+    }
+
+    if (!res.ok) throw new Error(data.msg || `HTTP ${res.status}`);
+
+    setKey(data.key);
+    setExpireAt(data.expireAt);
+
+    try { await navigator.clipboard.writeText(data.key); setCopyStatus("Key tersalin ke clipboard."); }
+    catch { setCopyStatus("Salin manual dengan tombol Copy Key."); }
+
+    setMessage("Berhasil: Key dibuat. Berlaku 24 jam.");
+  } catch (e) {
+    setMessage(String(e.message || e));    // <- tampilkan pesan asli
   }
+}
+
 
   async function copyKey() {
     if (!key) return;
