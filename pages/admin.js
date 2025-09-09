@@ -183,7 +183,7 @@ export default function AdminPage() {
                       <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
                         sisa {ttlMin} menit · dibuat {fmtTs(row.createdAt)} · exp {fmtTs(row.expiresAt)} · ip {row.ip}
                       </div>
-                    </div>
+              
                     <div style={{ display:"flex", gap:6 }}>
   <button className="btn" onClick={()=> navigator.clipboard.writeText(row.key)}>Copy</button>
   <button className="btn btn-ghost" onClick={()=> setRevokeKey(row.key)}>Gunakan</button>
